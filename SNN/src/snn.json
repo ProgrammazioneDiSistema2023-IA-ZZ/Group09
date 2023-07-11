@@ -1,0 +1,490 @@
+{
+  "layers": [
+    {
+      "id": 0,
+      "neurons": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": 1,
+      "neurons": [
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "id": 2,
+      "neurons": [
+        9,
+        10,
+        11
+      ]
+    }
+  ],
+  "neurons": [
+    {
+      "id": 0,
+      "layer": 0,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [
+        {
+          "to": 4,
+          "weight": 0.4
+        },
+        {
+          "to": 5,
+          "weight": 0.1
+        },
+        {
+          "to": 6,
+          "weight": 0.1
+        },
+        {
+          "to": 7,
+          "weight": 0.1
+        },
+        {
+          "to": 8,
+          "weight": 0.1
+        }
+      ],
+      "same_layer_synapses": [
+        {
+          "to": 1,
+          "weight": 0.0
+        },
+        {
+          "to": 2,
+          "weight": 0.0
+        },
+        {
+          "to": 3,
+          "weight": -0.1
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "layer": 0,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [
+        {
+          "to": 4,
+          "weight": 0.5
+        },
+        {
+          "to": 5,
+          "weight": 0.2
+        },
+        {
+          "to": 6,
+          "weight": 0.1
+        },
+        {
+          "to": 7,
+          "weight": 0.2
+        },
+        {
+          "to": 8,
+          "weight": 0.1
+        }
+      ],
+      "same_layer_synapses": [
+        {
+          "to": 0,
+          "weight": 0.0
+        },
+        {
+          "to": 2,
+          "weight": 0.1
+        },
+        {
+          "to": 3,
+          "weight": -0.2
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "layer": 0,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [
+        {
+          "to": 4,
+          "weight": 0.2
+        },
+        {
+          "to": 5,
+          "weight": 0.1
+        },
+        {
+          "to": 6,
+          "weight": 0.2
+        },
+        {
+          "to": 7,
+          "weight": 0.1
+        },
+        {
+          "to": 8,
+          "weight": 0.0
+        }
+      ],
+      "same_layer_synapses": [
+        {
+          "to": 0,
+          "weight": 0.0
+        },
+        {
+          "to": 1,
+          "weight": 0.01
+        },
+        {
+          "to": 3,
+          "weight": -0.15
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "layer": 0,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [
+        {
+          "to": 4,
+          "weight": 0.05
+        },
+        {
+          "to": 5,
+          "weight": 0.5
+        },
+        {
+          "to": 6,
+          "weight": 0.8
+        },
+        {
+          "to": 7,
+          "weight": 0.1
+        },
+        {
+          "to": 8,
+          "weight": 0.1
+        }
+      ],
+      "same_layer_synapses": [
+        {
+          "to": 0,
+          "weight": 0.1
+        },
+        {
+          "to": 1,
+          "weight": 0.1
+        },
+        {
+          "to": 2,
+          "weight": 0.1
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "layer": 1,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [
+        {
+          "to": 9,
+          "weight": 0.1
+        },
+        {
+          "to": 10,
+          "weight": 0.5
+        },
+        {
+          "to": 11,
+          "weight": 0.1
+        }
+      ],
+      "same_layer_synapses": [
+        {
+          "to": 5,
+          "weight": 0.1
+        },
+        {
+          "to": 6,
+          "weight": 0.1
+        },
+        {
+          "to": 7,
+          "weight": 0.1
+        },
+        {
+          "to": 8,
+          "weight": 0.1
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "layer": 1,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [
+        {
+          "to": 9,
+          "weight": 0.05
+        },
+        {
+          "to": 10,
+          "weight": 0.6
+        },
+        {
+          "to": 11,
+          "weight": 0.05
+        }
+      ],
+      "same_layer_synapses": [
+        {
+          "to": 4,
+          "weight": 0.1
+        },
+        {
+          "to": 6,
+          "weight": 0.1
+        },
+        {
+          "to": 7,
+          "weight": 0.1
+        },
+        {
+          "to": 8,
+          "weight": 0.1
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "layer": 1,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [
+        {
+          "to": 9,
+          "weight": 0.05
+        },
+        {
+          "to": 10,
+          "weight": 0.5
+        },
+        {
+          "to": 11,
+          "weight": 0.0
+        }
+      ],
+      "same_layer_synapses": [
+        {
+          "to": 4,
+          "weight": 0.1
+        },
+        {
+          "to": 5,
+          "weight": 0.1
+        },
+        {
+          "to": 7,
+          "weight": 0.1
+        },
+        {
+          "to": 8,
+          "weight": 0.1
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "layer": 1,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [
+        {
+          "to": 9,
+          "weight": 0.01
+        },
+        {
+          "to": 10,
+          "weight": 0.9
+        },
+        {
+          "to": 11,
+          "weight": 0.05
+        }
+      ],
+      "same_layer_synapses": [
+        {
+          "to": 4,
+          "weight": 0.1
+        },
+        {
+          "to": 5,
+          "weight": 0.1
+        },
+        {
+          "to": 6,
+          "weight": 0.1
+        },
+        {
+          "to": 8,
+          "weight": 0.1
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "layer": 1,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [
+        {
+          "to": 9,
+          "weight": 0.0
+        },
+        {
+          "to": 10,
+          "weight": 0.5
+        },
+        {
+          "to": 11,
+          "weight": 0.2
+        }
+      ],
+      "same_layer_synapses": [
+        {
+          "to": 4,
+          "weight": 0.1
+        },
+        {
+          "to": 5,
+          "weight": 0.1
+        },
+        {
+          "to": 6,
+          "weight": 0.1
+        },
+        {
+          "to": 7,
+          "weight": 0.1
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "layer": 2,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [],
+      "same_layer_synapses": [
+        {
+          "to": 10,
+          "weight": 0
+        },
+        {
+          "to": 11,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "layer": 2,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [],
+      "same_layer_synapses": [
+        {
+          "to": 9,
+          "weight": 0
+        },
+        {
+          "to": 11,
+          "weight": 0
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "layer": 2,
+      "potential": 0.5,
+      "last_activity": 0,
+      "rest_potential": 0.1,
+      "threshold_potential": 0.3,
+      "reset_potential": 0.1,
+      "time_constant": 0.01,
+      "next_layer_synapses": [],
+      "same_layer_synapses": [
+        {
+          "to": 9,
+          "weight": 0
+        },
+        {
+          "to": 10,
+          "weight": 0
+        }
+      ]
+    }
+  ]
+}

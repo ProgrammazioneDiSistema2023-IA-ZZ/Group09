@@ -1,0 +1,200 @@
+[
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.8
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.1
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.0
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.5
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.1
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.9
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.05
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.1
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.2
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.0
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.5
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.9
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.1
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.8
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.1
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.0
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.5
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.1
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.9
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.05
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.1
+    }
+  ],
+  [
+    {
+      "neuron_id": 0,
+      "weight": 0.2
+    },
+    {
+      "neuron_id": 1,
+      "weight": 0.1
+    },
+    {
+      "neuron_id": 2,
+      "weight": 0.0
+    },
+    {
+      "neuron_id": 3,
+      "weight": 0.0
+    }
+  ]
+]
