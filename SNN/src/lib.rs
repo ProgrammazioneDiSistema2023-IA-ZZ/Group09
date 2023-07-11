@@ -214,7 +214,6 @@ impl SNN {
                 }
             };
 
-        //println!("id : {} old potential {} new potential {} a {} b {} c {} ", neuron_id, neuron.potential, new_potential, a, b, c);
 
         Message {
             neuron_id,
@@ -599,12 +598,10 @@ impl SNN {
             for handle in handles {
                 tokyo_results.push(handle.await.unwrap().await);
             }
-            //println!("END ITER");
 
             let mut neuron_found = false;
             let mut neurons_write = neurons.write().await;
             for message in tokyo_results {
-                //println!("{} id {} pot {}", message.triggered, message.neuron_id, message.new_potential);
                 neurons_write[message.neuron_id].potential = message.new_potential;
                 neurons_write[message.neuron_id].last_activity = t;
 
