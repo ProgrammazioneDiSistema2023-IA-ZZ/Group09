@@ -5,13 +5,13 @@ use lib::{Fault, Neuron, SNN, Unit, SignalInput};
 
 #[tokio::main]
 async fn main() {
-    let json_string = fs::read_to_string("C:\\Users\\Rosso\\Documents\\Universita'\\Programmazione di sistema\\pds_project\\Group09\\SNN\\src\\snn.json").unwrap();
+    let json_string = fs::read_to_string("snn.json").unwrap();
     let snn: SNN = SNN::from_json(&json_string);
 
 
-    let json_string = fs::read_to_string("C:\\Users\\Rosso\\Documents\\Universita'\\Programmazione di sistema\\pds_project\\Group09\\SNN\\src\\input.json").unwrap();
+    let json_string = fs::read_to_string("input.json").unwrap();
     let input= SignalInput::from_json(&json_string);
-    let json_string = fs::read_to_string("C:\\Users\\Rosso\\Documents\\Universita'\\Programmazione di sistema\\pds_project\\Group09\\SNN\\src\\input2.json").unwrap();
+    let json_string = fs::read_to_string("input2.json").unwrap();
     let input2= SignalInput::from_json(&json_string);
 
 
