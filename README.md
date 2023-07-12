@@ -12,7 +12,7 @@ To build the project use:
 cargo build
 ```
 
-To run the example main, use:
+To run the [example main](SNN/src/main.rs), use:
 
 ```
 cargo run
