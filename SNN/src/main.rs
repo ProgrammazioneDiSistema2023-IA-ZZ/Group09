@@ -2,16 +2,20 @@ use std::cmp::Ordering;
 use std::fs;
 mod lib;
 use lib::{Fault, Neuron, SNN, Unit, SignalInput};
+use crate::lib::print_output;
 
 #[tokio::main]
 async fn main() {
-    let json_string = fs::read_to_string("snn.json").unwrap();
+    //let json_string = fs::read_to_string("snn.json").unwrap();
+    let json_string = fs::read_to_string("C:\\Users\\Rosso\\Documents\\Universita'\\Programmazione di sistema\\pds_project\\Group09\\SNN\\src\\snn.json").unwrap();
     let snn: SNN = SNN::from_json(&json_string);
 
 
-    let json_string = fs::read_to_string("input.json").unwrap();
+    //let json_string = fs::read_to_string("input.json").unwrap();
+    let json_string = fs::read_to_string("C:\\Users\\Rosso\\Documents\\Universita'\\Programmazione di sistema\\pds_project\\Group09\\SNN\\src\\input.json").unwrap();
     let input= SignalInput::from_json(&json_string);
-    let json_string = fs::read_to_string("input2.json").unwrap();
+    //let json_string = fs::read_to_string("input2.json").unwrap();
+    let json_string = fs::read_to_string("C:\\Users\\Rosso\\Documents\\Universita'\\Programmazione di sistema\\pds_project\\Group09\\SNN\\src\\input2.json").unwrap();
     let input2= SignalInput::from_json(&json_string);
 
 
@@ -25,6 +29,9 @@ async fn main() {
         (new_potential, triggered)
     };
 
-    snn.test(1.0, vec![input, input2], vec![(Fault::Transient, Unit::ThresholdPotential)],10, 10, f).await;
+    let inputs = &vec![input, input2];
+
+    let ret = snn.test(1.0, &inputs, vec![(Fault::Transient, Unit::ThresholdPotential),(Fault::StuckAtZero, Unit::NeuronInput)],10, 10, f).await;
+    print_output(&ret);
 
 }

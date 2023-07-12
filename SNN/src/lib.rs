@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, Mul};
 use std::sync::Arc;
@@ -8,7 +9,7 @@ use serde_json;
 use rand::{Rng, thread_rng};
 
 #[derive(Clone, Copy)]
-enum FaultType {
+pub enum FaultType {
     StuckAtZero(u8),
     StuckAtOne(u8),
     Transient(u8, i32),
@@ -31,14 +32,14 @@ impl Display for FaultType{
 }
 
 #[derive(PartialEq, Clone, Debug)]
-enum OpSelector {
+pub enum OpSelector {
     FirstOperand,
     SecondOperand,
     Result,
 }
 
 #[derive(PartialEq, Clone)]
-enum TestedUnit {
+pub enum TestedUnit {
     //elaboration
     Adder(OpSelector, usize),
     Multiplier(OpSelector, usize),
@@ -90,8 +91,6 @@ impl Display for TestedUnit{
         }
     }
 }
-
-//PUBLIC ENUM TO ADD VALUES
 
 pub enum Fault {
     StuckAtZero,
@@ -177,7 +176,24 @@ impl SNN {
         self.layers[layer_id].add_neuron(ret);
         ret
     }
-    async fn worker<'a>(neurons: Arc<RwLock<Vec<Neuron>>>, neuron_id: usize, input_signal: f32, current_step: i32, delta: f32, f: impl Fn(&Neuron, f32, i32, f32, Box<dyn Fn(f32, f32) -> f32 >, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> Ordering>) -> (f32, bool), fault: Option<Arc<(FaultType, TestedUnit)>>) -> Message {
+
+    pub fn new_synapse(&mut self, neuron_from: usize, neuron_to: usize, weight: f32) {
+        if self.layers[self.neurons[neuron_from].layer].neurons.contains(&neuron_to){
+            self.neurons[neuron_from].same_layer_synapses.push(Synapses {
+                to: neuron_to,
+                weight,
+            });
+        }
+        else if self.layers[self.neurons[neuron_from].layer+1].neurons.contains(&neuron_to){
+            self.neurons[neuron_from].next_layer_synapses.push(Synapses {
+                to: neuron_to,
+                weight,
+            });
+        }
+    }
+
+
+    async fn worker(neurons: Arc<RwLock<Vec<Neuron>>>, neuron_id: usize, input_signal: f32, current_step: i32, delta: f32, f: impl Fn(&Neuron, f32, i32, f32, Box<dyn Fn(f32, f32) -> f32 >, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> Ordering>) -> (f32, bool), fault: Option<Arc<(FaultType, TestedUnit)>>) -> Message {
         let neurons = neurons.read().await;
         let neuron = &neurons[neuron_id];
 
@@ -255,6 +271,9 @@ impl SNN {
     /// * `n_inferences`: number of inferences of the input matrices each one randomly adding one of the faults in the fault_to_add array
     /// * `f`: activation function of the neuron
     ///
+    /// returns a vector of Outputs, containing for each input the output with no fault added and the list of outputs
+    /// with the faults added
+    ///
     /// # Activation Function
     ///
     /// The activation function accept:
@@ -281,28 +300,39 @@ impl SNN {
     /// Implementation of the Leaky Integrate and Fire model:
     ///
     /// ```
-    ///    let f = |neuron: &Neuron, input_signal: f32, current_step: i32, delta: f32, testing_add: Box<dyn Fn(f32, f32) -> f32>, testing_mul: Box<dyn Fn(f32, f32) -> f32>, testing_cmp: Box<dyn Fn(f32, f32) -> Ordering>| {
-    ///         let a = testing_add(neuron.potential, -neuron.rest_potential);
-    ///         let b = testing_mul(testing_add(current_step as f32, -neuron.last_activity as f32), delta);
-    ///         let c = (-b / neuron.time_constant).exp();
-    ///         let mut new_potential = testing_add(testing_add(neuron.rest_potential, testing_mul(a, c)), input_signal);
-    ///        let triggered = testing_cmp(new_potential, neuron.threshold_potential) == Ordering::Greater;
-    ///         if triggered { new_potential = neuron.reset_potential };
-    ///         (new_potential, triggered)
-    ///     };
+    /// let f = |neuron: &Neuron, input_signal: f32, current_step: i32, delta: f32,
+    /// testing_add: Box<dyn Fn(f32, f32) -> f32>,
+    /// testing_mul: Box<dyn Fn(f32, f32) -> f32>,
+    /// testing_cmp: Box<dyn Fn(f32, f32) -> Ordering>| {
+    ///
+    /// let a = testing_add(neuron.potential, -neuron.rest_potential);
+    ///
+    /// let b = testing_mul(testing_add(current_step as f32, -neuron.last_activity as f32), delta);
+    ///
+    /// let c = (-b / neuron.time_constant).exp();
+    ///
+    /// let mut new_potential = testing_add(testing_add(neuron.rest_potential, testing_mul(a, c)), input_signal);
+    ///
+    /// let triggered = testing_cmp(new_potential, neuron.threshold_potential) == Ordering::Greater;
+    ///
+    /// if triggered { new_potential = neuron.reset_potential };
+    ///
+    /// (new_potential, triggered)
+    /// };
     /// ```
-    pub async fn test(self, delta: f32, input_matrices: Vec<Vec<Vec<SignalInput>>>, faults_to_add: Vec<(Fault, Unit)>, max_transient_iteration: i32, n_inferences: usize, f: fn(&Neuron, f32, i32, f32, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> Ordering>) -> (f32, bool))  {
+    pub async fn test<'a>(self, delta: f32, input_matrices: &'a Vec<Vec<Vec<SignalInput>>>, faults_to_add: Vec<(Fault, Unit)>, max_transient_iteration: i32, n_inferences: usize, f: fn(&Neuron, f32, i32, f32, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> Ordering>) -> (f32, bool)) -> Vec<Output<'a>> {
 
         let neurons = Arc::new(RwLock::new(self.neurons));
 
-        let mut working_output = Vec::<Vec<i32>>::with_capacity(input_matrices.len());
-        for input in &input_matrices{
-            working_output.push(Self::run(neurons.clone(), &self.layers, delta, input, None, f).await);
+        let mut ret = Vec::<Output>::with_capacity(input_matrices.len());
+
+        for input in input_matrices{
+            ret.push(Output {
+                input,
+                no_fault_output: Self::run(neurons.clone(), &self.layers, delta, input, None, f).await,
+                with_fault_output: vec![],
+            });
         }
-
-
-        let mut broken_outputs = Vec::<Vec<Vec<i32>>>::with_capacity(n_inferences);
-        let mut faults_added = Vec::with_capacity(n_inferences);
 
         for i in 0..n_inferences{
             let neurons_read = neurons.read().await;
@@ -392,42 +422,23 @@ impl SNN {
             };
             let arc_fault = Arc::new(fault);
             drop(neurons_read);
-            broken_outputs.push(vec![]);
-            for input in &input_matrices{
-                broken_outputs[i].push(Self::run(neurons.clone(), &self.layers, delta, input, Some(arc_fault.clone()), f).await);
-                faults_added.push(arc_fault.clone());
+            for (j, input) in input_matrices.iter().enumerate(){
+                ret[j].with_fault_output.push(OutputFaulted {
+                    output: Self::run(neurons.clone(), &self.layers, delta, &input, Some(arc_fault.clone()), f).await,
+                    fault: (*arc_fault).0.clone(),
+                    unit:  (*arc_fault).1.clone(),
+                });
             }
+
         }
 
-        for i in 0..n_inferences{
-            let res = Self::outputs_compare(&broken_outputs[i], &working_output);
-            if res.len() != 0{
-                println!("Found differences in test n°{}\n Fault: {}\n Unit: {}", i, faults_added[i].0, faults_added[i].1);
-                for r in res{
-                    println!("\t- input n°{} at output neuron {}", r.0, r.1);
-                    println!("\t\twith fault:    {:?}", broken_outputs[i][r.0]);
-                    println!("\t\twith no fault: {:?}", working_output[r.0]);
-                }
-            }
-        }
-
+        ret
 
     }
 
-    fn outputs_compare(a : &Vec<Vec<i32>>, b : &Vec<Vec<i32>>) -> Vec<(usize, usize)> {
-        let mut diff = Vec::<(usize, usize)>::new();
-        for i in 0..a.len(){
-            for j in 0..a[i].len(){
-                if a[i][j]!=b[i][j]{
-                    diff.push((i,j));
-                }
-            }
-        }
-        diff
-    }
 
 
-    async fn run(neurons: Arc<RwLock<Vec<Neuron>>>, layers: &Vec<Layer>, delta: f32, input_matrix: &Vec<Vec<SignalInput>>, fault: Option<Arc<(FaultType, TestedUnit)>>, f: fn(&Neuron, f32, i32, f32, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> Ordering>) -> (f32, bool)) -> Vec<i32> {
+    async fn run(neurons: Arc<RwLock<Vec<Neuron>>>, layers: &Vec<Layer>, delta: f32, input_matrix: &Vec<Vec<SignalInput>>, fault: Option<Arc<(FaultType, TestedUnit)>>, f: fn(&Neuron, f32, i32, f32, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> f32>, Box<dyn Fn(f32, f32) -> Ordering>) -> (f32, bool)) -> Vec<Vec<bool>> {
         let mut neurons_write = neurons.write().await;
 
         neurons_write.iter_mut().for_each(|n| n.initialize());
@@ -498,7 +509,8 @@ impl SNN {
         }
 
         let last_layer_first_neuron_id = layers[layers.len() - 1].neurons[0];
-        let mut ret = vec![0; layers.last().unwrap().neurons.len()];
+        let mut ret = Vec::new();
+
 
 
         let mut t = 0;
@@ -506,26 +518,13 @@ impl SNN {
         let mut input_iter = input_matrix.iter();
         let mut n_to_trigger = 0;
         let mut countdown = layers.len();
+        let last_layer_n = layers.last().unwrap().neurons.len();
 
         drop(neurons_write);
 
-        /*        let broken_f = match fault {
-                    None => {None}
-                    Some((ft, u)) => {
-                        if u == TestedUnit::Adder || u == TestedUnit::Multiplier || u == TestedUnit::Comparator{
-                            Some(Self::bind_f_with_fault(f, ft, u))
-                        }
-                        else {None}
-                    }
-                };
-                let f = Self::bind_f(f);
-
-                let fault = Arc::new(fault);
-
-                let g = Arc::new(Self::bind_to_f(f, fault));*/
-
 
         loop {
+            ret.push(vec![false; last_layer_n]);
             t += 1;
             match input_iter.next() {
                 None => {
@@ -640,7 +639,7 @@ impl SNN {
                         results[synapse.to].weight += synapse.weight;   //NEURON OUTPUT
                     }
                     if message.neuron_id >= last_layer_first_neuron_id {
-                        ret[message.neuron_id - last_layer_first_neuron_id] += 1;
+                        ret[t as usize -1][message.neuron_id - last_layer_first_neuron_id] = true;
                     }
                 }
             }
@@ -708,7 +707,7 @@ impl SNN {
                                         results[synapse.to].weight += synapse.weight;   //NEURON OUTPUT
                                     }
                                     if *n >= last_layer_first_neuron_id {
-                                        ret[*n - last_layer_first_neuron_id] += 1;
+                                        ret[t as usize -1][*n - last_layer_first_neuron_id] = true;
                                     }
                                 }
                             }
@@ -723,7 +722,7 @@ impl SNN {
                                         results[synapse.to].weight += synapse.weight;   //NEURON OUTPUT
                                     }
                                     if *n >= last_layer_first_neuron_id {
-                                        ret[*n - last_layer_first_neuron_id] += 1;
+                                        ret[t as usize -1][*n - last_layer_first_neuron_id] = true;
                                     }
                                 }
                             }
@@ -805,18 +804,6 @@ pub struct Neuron {
 }
 
 impl Neuron {
-    pub fn add_same_layer_synapse(&mut self, neuron: usize, weight: f32) {
-        self.same_layer_synapses.push(Synapses {
-            to: neuron,
-            weight,
-        });
-    }
-    pub fn add_next_layer_synapse(&mut self, neuron: usize, weight: f32) {
-        self.next_layer_synapses.push(Synapses {
-            to: neuron,
-            weight,
-        });
-    }
 
     fn initialize(&mut self) {
         self.last_activity = 0;
@@ -838,8 +825,8 @@ struct Message {
 
 #[derive(Serialize, Deserialize)]
 pub struct SignalInput {
-    neuron_id: usize,
-    weight: f32,
+    pub neuron_id: usize,
+    pub weight: f32,
 }
 
 /// Create new input for the Spiral Neural Network from JSON string
@@ -871,5 +858,60 @@ impl SignalOutput {
     }
 }
 
+/// Output of a test function
+///
+/// * input: reference to input matrix
+/// * no_fault_output: output matrix with no fault added
+/// * with fault added: list of outputs with fault added
+pub struct Output<'a> {
+    pub input : &'a Vec<Vec<SignalInput>>,
+    pub no_fault_output: Vec<Vec<bool>>,
+    pub with_fault_output: Vec<OutputFaulted>
+}
+
+/// Output with fault added
+///
+/// * output: output matrix obtained after the fault were added
+/// * fault: type of fault added
+/// * unit: unit whom fault was added
+///
+pub struct OutputFaulted {
+    pub output: Vec<Vec<bool>>,
+    pub fault: FaultType,
+    pub unit : TestedUnit
+}
+///
+/// Pretty print of test function result
+///
+/// # Arguments
+///
+/// v : list of output object
+///
+pub fn print_output(v: &Vec<Output>){
+    for (i,r) in v.iter().enumerate(){
+        println!("\nInput #{}", i);
+        println!("\n#################\n\nNO FAULT OUTPUT:\n");
+        for a in &r.no_fault_output{
+            print!("[");
+            for b in a{
+                print!("{} ", if *b {"1"} else{"0"});
+            }
+            print!("\u{8}] ")
+        }
+        println!("\n\n#################\n\nFAULTED OUTPUTS:");
+        for t in &r.with_fault_output{
+            println!("\nadding fault: {} at unit: {}: ", t.fault, t.unit);
+            for a in &t.output{
+                print!("[");
+                for b in a{
+                    print!("{} ", if *b {"1"} else{"0"});
+                }
+                print!("\u{8}] ")
+            }
+            print!("\n");
+        }
+    }
+
+}
 
 fn main() {}
