@@ -108,9 +108,9 @@ Vector of Outputs, containing for each input the output with no fault added and 
 ### Activation Function
 
 The activation function accept:
-- `neuron: &Neuron `: reference to a Neuron
-- `input_signal: f32 `: the input signal of the neuron in the step (sum of the activated synapses' weights)
-- `current_step : i32 `: the current step of the execution
+- `neuron: &Neuron` : reference to a Neuron
+- `input_signal: f32` : the input signal of the neuron in the step (sum of the activated synapses' weights)
+- `current_step : i32` : the current step of the execution
 - `delta : f32` : the time measure of the time step
 
 - `testing_add : Box<dyn Fn(f32, f32) -> f32>` : adding function between f32 modified to accept faults
