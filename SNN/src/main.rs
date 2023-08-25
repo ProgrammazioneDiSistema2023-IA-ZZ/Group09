@@ -1,37 +1,47 @@
 use std::cmp::Ordering;
-use std::fs;
-mod lib;
-use lib::{Fault, Neuron, SNN, Unit, SignalInput};
-use crate::lib::print_output;
 
-#[tokio::main]
+mod renderer;
+mod network;
+use network::{Snn};
+use crate::network::{ExpectedOutput, Fault, Neuron, SignalInput, Unit};
+
+
+#[tokio::main(flavor = "multi_thread", worker_threads = 8)]
 async fn main() {
-    //let json_string = fs::read_to_string("snn.json").unwrap();
-    let json_string = fs::read_to_string("C:\\Users\\Rosso\\Documents\\Universita'\\Programmazione di sistema\\pds_project\\Group09\\SNN\\src\\snn.json").unwrap();
-    let snn: SNN = SNN::from_json(&json_string);
 
+    println!("Loading network...");
 
-    //let json_string = fs::read_to_string("input.json").unwrap();
-    let json_string = fs::read_to_string("C:\\Users\\Rosso\\Documents\\Universita'\\Programmazione di sistema\\pds_project\\Group09\\SNN\\src\\input.json").unwrap();
-    let input= SignalInput::from_json(&json_string);
-    //let json_string = fs::read_to_string("input2.json").unwrap();
-    let json_string = fs::read_to_string("C:\\Users\\Rosso\\Documents\\Universita'\\Programmazione di sistema\\pds_project\\Group09\\SNN\\src\\input2.json").unwrap();
-    let input2= SignalInput::from_json(&json_string);
+    let snn = Snn::from_numpy(vec!["./src/network_params/weights1.npy","./src/network_params/weights2.npy"], 0.9375, 1.0, 0.0, 0.0);
 
+    println!("Loading inputs...");
+
+    let inputs = SignalInput::from_numpy("./src/network_params/inputs.npy", Some(10));
+    let expected_outputs = ExpectedOutput::from_numpy("./src/network_params/outputs.npy");
+
+    println!("Starting...");
 
     let f = |neuron: &Neuron, input_signal: f32, current_step: i32, delta: f32, testing_add: Box<dyn Fn(f32, f32) -> f32>, testing_mul: Box<dyn Fn(f32, f32) -> f32>, testing_cmp: Box<dyn Fn(f32, f32) -> Ordering>| {
+
         let a = testing_add(neuron.potential, -neuron.rest_potential);
         let b = testing_mul(testing_add(current_step as f32, -neuron.last_activity as f32), delta);
         let c = (-b / neuron.time_constant).exp();
         let mut new_potential = testing_add(testing_add(neuron.rest_potential, testing_mul(a, c)), input_signal);
         let triggered = testing_cmp(new_potential, neuron.threshold_potential) == Ordering::Greater;
-        if triggered { new_potential = neuron.reset_potential };
+
+        //if triggered { new_potential = neuron.reset_potential};   document implementation
+        if triggered { new_potential = testing_add(neuron.potential, -neuron.threshold_potential) }; //snn torch implementation
+
         (new_potential, triggered)
     };
 
-    let inputs = &vec![input, input2];
+    let faults_to_add = vec![
+        (Fault::StuckAtZero, Unit::Multiplier),
+        (Fault::StuckAtOne, Unit::Adder),
+    ];
 
-    let ret = snn.test(1.0, &inputs, vec![(Fault::Transient, Unit::ThresholdPotential),(Fault::StuckAtZero, Unit::NeuronInput)],10, 10, f).await;
-    print_output(&ret);
+    let result = snn.test(1.0, &inputs, faults_to_add, 10, 2, f, expected_outputs).await;
+
+    network::print_output(&result);
+    renderer::render_to_html(&result, "./src/templates/template.hbs", "./src/templates/output.html");
 
 }
