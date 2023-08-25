@@ -1046,8 +1046,8 @@ impl ExpectedOutput{
     /// Create a dummy expected output vector
     /// # Arguments:
     /// * n_inputs: number of inputs to be used
-    pub fn dummy(n_inputs: usize)->Vec<ExpectedOutput>{ vec![ExpectedOutput{value : 0}, n_inputs] }
-    
+    pub fn dummy(n_inputs: usize)->Vec<ExpectedOutput>{ vec![ExpectedOutput{value : 0}; n_inputs] }
+
 }
 
 
