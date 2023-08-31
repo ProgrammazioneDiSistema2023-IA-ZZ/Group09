@@ -110,7 +110,7 @@ Test the SNN over a given array of possible faults
 * `n_inferences`: number of inferences of the input matrices each one randomly adding one of the faults in the fault_to_add array
 * `delta`: time measure of a time step
 * `f`: activation function of the neuron [specifications](#activation-function)
-* `expected_outputs` : outputs expected [specifications](#output)
+* `expected_outputs` : outputs expected [specifications](#input)
 
 ### Return
 
