@@ -809,204 +809,211 @@ impl Snn {
                 }
             }
 
-            for i in 0..neurons.len() {
-                if neurons[i].triggered {
-                    if let Some((ft, TestedUnit::NeuronInput(neuron, new_input))) = &*fault {
-                        if new_input.is_none() && i == neuron - offset {
-                            match ft {
-                                FaultType::StuckAtZero(_) | FaultType::StuckAtOne(_) => {
-                                    neurons[i].input = Self::add_fault_to_float(neurons[i].input, ft);
-                                }
-                                FaultType::Transient(_, time) => {
-                                    if *time == t {
+            let mut starting_neuron = 0;
+
+            for layer_id in 1..snn.layers.len(){
+                for i in starting_neuron..starting_neuron + snn.layers[layer_id].neurons.len() {
+                    if neurons[i].triggered {
+                        if let Some((ft, TestedUnit::NeuronInput(neuron, new_input))) = &*fault {
+                            if new_input.is_none() && i == neuron - offset {
+                                match ft {
+                                    FaultType::StuckAtZero(_) | FaultType::StuckAtOne(_) => {
                                         neurons[i].input = Self::add_fault_to_float(neurons[i].input, ft);
                                     }
-                                }
-                            }
-                        }
-                    }
-
-                    let (new_potential, triggered) =
-                        match &*fault {
-                            None => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
-                            Some(x) => {
-                                let (fault_type, unit) = x;
-
-                                let mut skip = false;
-                                if let FaultType::Transient(_, time) = fault_type {
-                                    skip = t != *time;
-                                }
-                                if skip {
-                                    f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b)))
-                                }
-                                else {
-                                    match unit {
-                                        TestedUnit::Adder(selector, n) => {
-                                            if i+offset == *n {
-                                                let fault_type = fault_type.clone();
-                                                match selector {
-                                                    OpSelector::FirstOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a, &fault_type.clone()).add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
-                                                    OpSelector::SecondOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(Self::add_fault_to_float(b, &fault_type.clone()))), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
-                                                    OpSelector::Result => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a.add(b), &fault_type.clone())), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
-                                                }
-                                            }
-                                            else { f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))) }
+                                    FaultType::Transient(_, time) => {
+                                        if *time == t {
+                                            neurons[i].input = Self::add_fault_to_float(neurons[i].input, ft);
                                         }
-                                        TestedUnit::Multiplier(selector, n) => {
-                                            if i+offset == *n {
-                                                let fault_type = fault_type.clone();
-                                                match selector {
-                                                    OpSelector::FirstOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a, &fault_type.clone()).mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
-                                                    OpSelector::SecondOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(Self::add_fault_to_float(b, &fault_type.clone()))), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
-                                                    OpSelector::Result => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a.mul(b), &fault_type.clone())), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
-                                                }
-                                            }
-                                            else { f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))) }
-                                        }
-                                        TestedUnit::Comparator(selector, n) => {
-                                            let fault_type = fault_type.clone();
-                                            if i+offset == *n {
-                                                match selector {
-                                                    OpSelector::FirstOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a, &fault_type.clone()).total_cmp(&b))),
-                                                    OpSelector::SecondOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&Self::add_fault_to_float(b, &fault_type.clone())))),
-                                                    OpSelector::Result => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
-                                                }
-                                            }
-                                            else { f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))) }
-                                        }
-                                        TestedUnit::RestPotential(n) | TestedUnit::ResetPotential(n) | TestedUnit::ThresholdPotential(n) => {
-                                            if i+offset == *n{
-                                                f(&faulted_neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b)))
-                                            }
-                                            else { f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))) }
-                                        }
-                                        _ => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b)))
                                     }
                                 }
                             }
-                        };
+                        }
 
-                    messages[i].message_received = true;
-                    messages[i].new_potential = new_potential;
-                    messages[i].triggered = triggered;
+                        let (new_potential, triggered) =
+                            match &*fault {
+                                None => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
+                                Some(x) => {
+                                    let (fault_type, unit) = x;
 
-                }
-                neurons[i].input = 0.0;
-                neurons[i].triggered = false;
-            }
-
-            let mut neuron_found = false;
-            for i in 0..messages.len() {
-
-                if !messages[i].message_received{
-                    continue;
-                }
-                messages[i].message_received = false;
-
-                neurons[i].potential = messages[i].new_potential;
-                neurons[i].last_activity = t;
-
-                if messages[i].triggered {
-
-                    //NEURON OUTPUT TEST
-                    if let Some(x) = &*fault {
-                        let (ft, u) = x;
-                        match u {
-                            TestedUnit::SynapseWeight(n, s, sl, new_input) => {
-                                if new_input.is_none() &&  i + offset == *n {
                                     let mut skip = false;
-                                    if let FaultType::Transient(_, time) = ft{
-                                        skip = *time != t;
+                                    if let FaultType::Transient(_, time) = fault_type {
+                                        skip = t != *time;
+                                    }
+                                    if skip {
+                                        f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b)))
+                                    }
+                                    else {
+                                        match unit {
+                                            TestedUnit::Adder(selector, n) => {
+                                                if i+offset == *n {
+                                                    let fault_type = fault_type.clone();
+                                                    match selector {
+                                                        OpSelector::FirstOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a, &fault_type.clone()).add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
+                                                        OpSelector::SecondOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(Self::add_fault_to_float(b, &fault_type.clone()))), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
+                                                        OpSelector::Result => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a.add(b), &fault_type.clone())), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
+                                                    }
+                                                }
+                                                else { f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))) }
+                                            }
+                                            TestedUnit::Multiplier(selector, n) => {
+                                                if i+offset == *n {
+                                                    let fault_type = fault_type.clone();
+                                                    match selector {
+                                                        OpSelector::FirstOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a, &fault_type.clone()).mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
+                                                        OpSelector::SecondOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(Self::add_fault_to_float(b, &fault_type.clone()))), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
+                                                        OpSelector::Result => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a.mul(b), &fault_type.clone())), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
+                                                    }
+                                                }
+                                                else { f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))) }
+                                            }
+                                            TestedUnit::Comparator(selector, n) => {
+                                                let fault_type = fault_type.clone();
+                                                if i+offset == *n {
+                                                    match selector {
+                                                        OpSelector::FirstOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| Self::add_fault_to_float(a, &fault_type.clone()).total_cmp(&b))),
+                                                        OpSelector::SecondOperand => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&Self::add_fault_to_float(b, &fault_type.clone())))),
+                                                        OpSelector::Result => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))),
+                                                    }
+                                                }
+                                                else { f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))) }
+                                            }
+                                            TestedUnit::RestPotential(n) | TestedUnit::ResetPotential(n) | TestedUnit::ThresholdPotential(n) => {
+                                                if i+offset == *n{
+                                                    f(&faulted_neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b)))
+                                                }
+                                                else { f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b))) }
+                                            }
+                                            _ => f(&snn.neuron_config, &neurons[i], t, delta, Box::new(move |a: f32, b: f32| a.add(b)), Box::new(move |a: f32, b: f32| a.mul(b)), Box::new(move |a: f32, b: f32| a.total_cmp(&b)))
+                                        }
                                     }
 
-                                    if !skip {
-                                        neurons[i].input += if *sl {
-                                            -snn.neurons[*n].same_layer_synapses[*s].weight
-                                            +Self::add_fault_to_float(snn.neurons[*n].same_layer_synapses[*s].weight, ft)
-                                        } else {
-                                            -snn.neurons[*n].next_layer_synapses[*s].weight
-                                            +Self::add_fault_to_float(snn.neurons[*n].next_layer_synapses[*s].weight, ft)
-                                        };
+                                }
+                            };
+
+                        messages[i].message_received = true;
+                        messages[i].new_potential = new_potential;
+                        messages[i].triggered = triggered;
+
+                    }
+                    neurons[i].input = 0.0;
+                    neurons[i].triggered = false;
+                }
+
+                let mut neuron_found = false;
+                for i in starting_neuron..starting_neuron + snn.layers[layer_id].neurons.len() {
+
+                    if !messages[i].message_received{
+                        continue;
+                    }
+                    messages[i].message_received = false;
+
+                    neurons[i].potential = messages[i].new_potential;
+                    neurons[i].last_activity = t;
+
+                    if messages[i].triggered {
+
+                        //NEURON OUTPUT TEST
+                        if let Some(x) = &*fault {
+                            let (ft, u) = x;
+                            match u {
+                                TestedUnit::SynapseWeight(n, s, sl, new_input) => {
+                                    if new_input.is_none() &&  i + offset == *n {
+                                        let mut skip = false;
+                                        if let FaultType::Transient(_, time) = ft{
+                                            skip = *time != t;
+                                        }
+
+                                        if !skip {
+                                            neurons[i].input += if *sl {
+                                                -snn.neurons[*n].same_layer_synapses[*s].weight
+                                                    +Self::add_fault_to_float(snn.neurons[*n].same_layer_synapses[*s].weight, ft)
+                                            } else {
+                                                -snn.neurons[*n].next_layer_synapses[*s].weight
+                                                    +Self::add_fault_to_float(snn.neurons[*n].next_layer_synapses[*s].weight, ft)
+                                            };
+                                        }
                                     }
                                 }
-                            }
-                            TestedUnit::NeuronOutput(n, new_input) => {
-                                if new_input.is_none() && i + offset == *n{
-                                    match ft{
-                                        FaultType::StuckAtZero(_) => {
-                                            continue;
-                                            //acting like the neuron was not triggered
-                                        }
-                                        FaultType::StuckAtOne(_) => {
-                                            neuron_found = true;
-                                            //the neuron was triggered, so later there's no need to act like it was triggered
-                                        }
-                                        FaultType::Transient(_, time) => {
-                                            if *time == t {
-                                                neuron_found = true;
+                                TestedUnit::NeuronOutput(n, new_input) => {
+                                    if new_input.is_none() && i + offset == *n{
+                                        match ft{
+                                            FaultType::StuckAtZero(_) => {
                                                 continue;
+                                                //acting like the neuron was not triggered
+                                            }
+                                            FaultType::StuckAtOne(_) => {
+                                                neuron_found = true;
+                                                //the neuron was triggered, so later there's no need to act like it was triggered
+                                            }
+                                            FaultType::Transient(_, time) => {
+                                                if *time == t {
+                                                    neuron_found = true;
+                                                    continue;
+                                                }
                                             }
                                         }
                                     }
                                 }
+                                _ => {}
                             }
-                            _ => {}
+                        }
+
+                        for synapse in snn.neurons[i + offset].next_layer_synapses.iter() {
+                            let n = &mut neurons[synapse.to - offset];
+                            n.input += synapse.weight; //NEURON OUTPUT
+                            n.triggered = true;
+                        }
+                        for synapse in snn.neurons[i + offset].same_layer_synapses.iter() {
+                            let n = &mut neurons[synapse.to - offset];
+                            n.input += synapse.weight; //NEURON OUTPUT
+                            n.triggered = true;
+                        }
+                        if i + offset >= last_layer_first_neuron_id {
+                            ret[t as usize - 1][i + offset - last_layer_first_neuron_id] = true;
+                        }
+                    }
+                }
+
+                if let Some((ft, TestedUnit::NeuronOutput(neuron, _))) = &*fault{
+
+                    let mut trigger = false;
+
+                    match ft{
+                        FaultType::StuckAtZero(_) => {}
+                        FaultType::StuckAtOne(_) => {
+                            trigger = !neuron_found;
+                        }
+                        FaultType::Transient(_, time) => {
+                            trigger = (*time == t) && !neuron_found
                         }
                     }
 
-                    for synapse in snn.neurons[i + offset].next_layer_synapses.iter() {
-                        let n = &mut neurons[synapse.to - offset];
-                        n.input += synapse.weight; //NEURON OUTPUT
-                        n.triggered = true;
-                    }
-                    for synapse in snn.neurons[i + offset].same_layer_synapses.iter() {
-                        let n = &mut neurons[synapse.to - offset];
-                        n.input += synapse.weight; //NEURON OUTPUT
-                        n.triggered = true;
-                    }
-                    if i + offset >= last_layer_first_neuron_id {
-                        ret[t as usize - 1][i + offset - last_layer_first_neuron_id] = true;
+                    if trigger{
+                        for synapse in snn.neurons[*neuron].next_layer_synapses.iter() {
+                            let n = &mut neurons[synapse.to - offset];
+                            n.input += synapse.weight; //NEURON OUTPUT
+                            n.triggered = true;
+                        }
+                        for synapse in snn.neurons[*neuron].same_layer_synapses.iter() {
+                            let n = &mut neurons[synapse.to - offset];
+                            n.input += synapse.weight; //NEURON OUTPUT
+                            n.triggered = true;
+                        }
+                        if *neuron >= last_layer_first_neuron_id {
+                            ret[t as usize - 1][*neuron - last_layer_first_neuron_id] = true;
+                        }
                     }
                 }
+
+                starting_neuron += snn.layers[layer_id].neurons.len()
             }
 
-            if let Some((ft, TestedUnit::NeuronOutput(neuron, _))) = &*fault{
-
-                let mut trigger = false;
-
-                match ft{
-                    FaultType::StuckAtZero(_) => {}
-                    FaultType::StuckAtOne(_) => {
-                        trigger = !neuron_found;
-                    }
-                    FaultType::Transient(_, time) => {
-                        trigger = (*time == t) && !neuron_found
-                    }
-                }
-
-                if trigger{
-                    for synapse in snn.neurons[*neuron].next_layer_synapses.iter() {
-                        let n = &mut neurons[synapse.to - offset];
-                        n.input += synapse.weight; //NEURON OUTPUT
-                        n.triggered = true;
-                    }
-                    for synapse in snn.neurons[*neuron].same_layer_synapses.iter() {
-                        let n = &mut neurons[synapse.to - offset];
-                        n.input += synapse.weight; //NEURON OUTPUT
-                        n.triggered = true;
-                    }
-                    if *neuron >= last_layer_first_neuron_id {
-                        ret[t as usize - 1][*neuron - last_layer_first_neuron_id] = true;
-                    }
-                }
-            }
 
         }
 
         (input_id, ret, fault.clone())
     }
 }
-
 #[derive(Serialize, Deserialize)]
 struct Layer {
     id: usize,
