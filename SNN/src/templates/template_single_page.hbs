@@ -38,7 +38,8 @@
         .white {
             color: white;
         }
-        .header-text{
+
+        .header-text {
             padding-left: 1.2em !important;
         }
 
@@ -67,20 +68,25 @@
         </tr>
         </thead>
         <tbody>
-            <tr>
-                <td class="col-5">No faulted sum</td>
-                {{#each t.no_fault_sum as |nf_value|}}
-                        <td>{{nf_value}}</td>
-                {{/each}}
-            </tr>
-            {{#each t.faulted_sum as |wf|}}
-                <tr>
-                <td>{{wf.fault}}</td>
-                {{#each wf.values as |wf_value|}}
-                    <td>{{wf_value}}</td>
-                {{/each}}
-                <tr>
+        <tr>
+            <td class="col-5">No faulted sum</td>
+            {{#each t.no_fault_sum as |nf_value|}}
+                <td>{{nf_value}}</td>
             {{/each}}
+        </tr>
+        {{#each t.faulted_sum as |wf|}}
+            {{#if wf.different}}
+                <tr class="red">
+                    <td class="white">{{wf.fault}}</td>
+            {{else}}
+                <tr>
+                    <td>{{wf.fault}}</td>
+            {{/if}}
+            {{#each wf.values as |wf_value|}}
+                    <td>{{wf_value}}</td>
+            {{/each}}
+            <tr>
+        {{/each}}
         </tbody>
     </table>
     <table class="table" id="input{{@index}}">
@@ -119,21 +125,21 @@
             {{#each tt.faulted as |wf|}}
                 {{#if wf.different}}
                     <tr class="red">
-                    <td class="white">
-                        {{wf.fault}}
-                    </td>
-                {{#each wf.values as |wf_value|}}
-                    {{#if wf_value}}
-                            <td>
-                                <div class="dot-full"></div>
-                            </td>
-                    {{else}}
-                            <td>
-                                <div class="dot-empty"></div>
-                            </td>
-                    {{/if}}
-                {{/each}}
-                </tr>
+                        <td class="white">
+                            {{wf.fault}}
+                        </td>
+                        {{#each wf.values as |wf_value|}}
+                            {{#if wf_value}}
+                                <td>
+                                    <div class="dot-full"></div>
+                                </td>
+                            {{else}}
+                                <td>
+                                    <div class="dot-empty"></div>
+                                </td>
+                            {{/if}}
+                        {{/each}}
+                    </tr>
                 {{else}}
                 {{/if}}
             {{/each}}
@@ -144,7 +150,8 @@
 <nav class="navbar fixed-bottom navbar-light bg-light">
     <p>Select input:</p>
     <input id="i">
-    <button onclick="window.location.href=`${window.location.pathname}#input${document.getElementById('i').value}`">Go</button>
+    <button onclick="window.location.href=`${window.location.pathname}#input${document.getElementById('i').value}`">Go
+    </button>
 </nav>
 </body>
 </html>

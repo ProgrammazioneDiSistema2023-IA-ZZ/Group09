@@ -1,47 +1,55 @@
 use std::cmp::Ordering;
+use std::sync::Arc;
 
 mod renderer;
 mod network;
-use network::{Snn};
-use crate::network::{ExpectedOutput, Fault, Neuron, SignalInput, Unit};
+use crate::network::{Snn, ExpectedOutput, Fault, Unit, NeuronConfig, NeuronInferenceParams, InputReader};
 
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 8)]
+#[tokio::main()]
 async fn main() {
 
     println!("Loading network...");
 
-    let snn = Snn::from_numpy(vec!["./src/network_params/weights1.npy","./src/network_params/weights2.npy"], 0.9375, 1.0, 0.0, 0.0);
+    let snn = Arc::new(
+        Snn::from_numpy(
+            vec!["./src/network_params/weights1.npy", "./src/network_params/weights2.npy"],
+            NeuronConfig::new(0.0, 1.0, 0.0, 0.9375)
+        )
+    );
 
-    println!("Loading inputs...");
-
-    let inputs = SignalInput::from_numpy("./src/network_params/inputs.npy", Some(10));
     let expected_outputs = ExpectedOutput::from_numpy("./src/network_params/outputs.npy");
 
-    println!("Starting...");
+    let f = |neuron_config: &NeuronConfig, neuron_params: &NeuronInferenceParams, current_step: i32, delta: f32, testing_add: Box<dyn Fn(f32, f32) -> f32>, testing_mul: Box<dyn Fn(f32, f32) -> f32>, testing_cmp: Box<dyn Fn(f32, f32) -> Ordering>| {
 
-    let f = |neuron: &Neuron, input_signal: f32, current_step: i32, delta: f32, testing_add: Box<dyn Fn(f32, f32) -> f32>, testing_mul: Box<dyn Fn(f32, f32) -> f32>, testing_cmp: Box<dyn Fn(f32, f32) -> Ordering>| {
+        let a = testing_add(neuron_params.potential, -neuron_config.rest_potential);
+        let b = testing_mul(testing_add(current_step as f32, -neuron_params.last_activity as f32), delta);
+        let c = (-b / neuron_config.time_constant).exp();
+        let mut new_potential = testing_add(testing_add(neuron_config.rest_potential, testing_mul(a, c)), neuron_params.input);
+        let triggered = testing_cmp(new_potential, neuron_config.threshold_potential) == Ordering::Greater;
 
-        let a = testing_add(neuron.potential, -neuron.rest_potential);
-        let b = testing_mul(testing_add(current_step as f32, -neuron.last_activity as f32), delta);
-        let c = (-b / neuron.time_constant).exp();
-        let mut new_potential = testing_add(testing_add(neuron.rest_potential, testing_mul(a, c)), input_signal);
-        let triggered = testing_cmp(new_potential, neuron.threshold_potential) == Ordering::Greater;
+       if triggered { new_potential = neuron_config.reset_potential};   //document implementation
+        // if triggered {
+        //     new_potential = testing_add(neuron_params.potential, -neuron_config.threshold_potential) }; //snn torch implementation
 
-        //if triggered { new_potential = neuron.reset_potential};   document implementation
-        if triggered { new_potential = testing_add(neuron.potential, -neuron.threshold_potential) }; //snn torch implementation
 
         (new_potential, triggered)
     };
 
     let faults_to_add = vec![
-        (Fault::StuckAtZero, Unit::Multiplier),
-        (Fault::StuckAtOne, Unit::Adder),
+         (Fault::StuckAtOne, Unit::Adder),
+         (Fault::StuckAtOne, Unit::Multiplier),
     ];
 
-    let result = snn.test(1.0, &inputs, faults_to_add, 10, 2, f, expected_outputs).await;
+    let input_reader = InputReader::from_numpy("./src/network_params/inputs.npy", None);
 
+    // let start = Instant::now();
+    let result = Snn::test(snn.clone(), input_reader, faults_to_add, 25, 1.0, f, expected_outputs).await;
+    // let elapsed = start.elapsed();
+    // println!("Elapsed time: {:?}", elapsed);
+
+    println!("Generating html output...");
+    renderer::render_to_html(&result,"./src/templates",false);
     network::print_output(&result);
-    renderer::render_to_html(&result, "./src/templates/template.hbs", "./src/templates/output.html");
 
 }
