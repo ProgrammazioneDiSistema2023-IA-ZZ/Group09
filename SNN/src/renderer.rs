@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::Path;
-use handlebars::{Handlebars};
+use handlebars::{Handlebars, RenderError};
 use crate::network::Output;
 use serde::{Serialize, Deserialize};
 use text_io::read;
@@ -97,7 +97,7 @@ fn to_json(output: &Output) -> OutputWithSumsJson {
 /// * data : vector of outputs to display
 /// * output_path : output HTML file path
 /// * index_file : use single page instead of directory with index page (if more than 2MB of storage is required, directory structure will be anyway used)
-pub fn render_to_html(data: &Vec<Output>, output_path: &str, single_page: bool){
+pub fn render_to_html(data: &Vec<Output>, output_path: &str, single_page: bool)->Result<(), RenderError>{
     let mut reg = Handlebars::new();
 
     let storage_needed = AVG_INFERENCE_STORAGE*data.len() as f32*data[0].with_fault_output.len() as f32;
@@ -110,7 +110,7 @@ pub fn render_to_html(data: &Vec<Output>, output_path: &str, single_page: bool){
         let line: String = read!("{}\n");
         if line != "y" && line != "Y"{
             println!("Exiting...");
-            return;
+            return Ok(());
         }
         println!("Proceeding...");
     }
@@ -118,8 +118,8 @@ pub fn render_to_html(data: &Vec<Output>, output_path: &str, single_page: bool){
     let data: Vec<OutputWithSumsJson> = data.iter().map(|x|to_json(x)).collect();
 
     if !single_page || storage_needed>SINGLE_PAGE_STORAGE_LIMIT{
-        reg.register_template_file("input", "./src/templates/template_input.hbs").expect("Unable to read template file");
-        reg.register_template_file("index", "./src/templates/template_index.hbs").expect("Unable to read template file");
+        reg.register_template_file("input", "./src/templates/template_input.hbs")?;
+        reg.register_template_file("index", "./src/templates/template_index.hbs")?;
 
         match reg.render("index", &data) {
             Ok(x) => {
@@ -131,27 +131,28 @@ pub fn render_to_html(data: &Vec<Output>, output_path: &str, single_page: bool){
                 }
 
                 path.push_str(&c.to_string());
-                fs::create_dir(&path).expect("Unable to create folder");
+                fs::create_dir(&path)?;
 
-                fs::write(format!("{}/index.html", &path), x).expect("Unable to write html file");
+                fs::write(format!("{}/index.html", &path), x)?;
                 for i in data{
                     match reg.render("input", &i) {
                         Ok(y) => {
-                            fs::write(format!("{}/input{}.html", path, i.input_id), y).expect("Unable to write html file");}
-                        Err(y) =>  { println!("{}", y); }
+                            fs::write(format!("{}/input{}.html", path, i.input_id), y)?;}
+                        Err(y) =>  {return Err(y) }
                     }
                 }
             }
-            Err(x) => { println!("{}", x); }
+            Err(x) => { return Err(x) }
         }
             }
     else {
-        reg.register_template_file("single_file", "./src/templates/template_single_page.hbs").expect("Unable to read template file");
+        reg.register_template_file("single_file", "./src/templates/template_single_page.hbs")?;
         match reg.render("single_file", &data) {
             Ok(x) => {
-                fs::write(output_path.to_owned()+"/output.html", x).expect("Unable to write html file");
+                fs::write(output_path.to_owned()+"/output.html", x)?;
             }
-            Err(x) => { println!("{}", x); }
+            Err(x) => { return Err(x) }
         }
     }
+    Ok(())
 }

@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, Mul};
 use std::sync::Arc;
 use ndarray::{Array1, Array2, Array3};
-use ndarray_npy::read_npy;
+use ndarray_npy::{read_npy, ReadNpyError};
 use serde::{Serialize, Deserialize};
 use rand::{Rng, thread_rng};
 use num_traits::cast::FromPrimitive;
@@ -166,11 +166,11 @@ impl InputReader {
     /// # Arguments
     /// * path : path to numpy file
     /// * limit : add optional limit to number of input retrieved from the file
-    pub fn from_numpy(path: &str, limit: Option<usize>) -> Self {
-        Self {
-            values: Arc::new(read_npy(path).expect("Failed to read INPUT numpy file")),
+    pub fn from_numpy(path: &str, limit: Option<usize>) -> Result<Self, ReadNpyError> {
+        Ok(Self {
+            values: Arc::new(read_npy(path)?),
             limit,
-        }
+        })
     }
 
     fn inject_fault(&self, snn: Arc<Snn>, input_matrices: &Vec<Arc<Vec<Vec<f32>>>>, fault: (FaultType, UnitInputGenerator)) -> Vec<Arc<Vec<Vec<f32>>>> {
@@ -317,14 +317,14 @@ impl Snn {
     /// * threshold_potential : threshold potential of the neuron
     /// * rest_potential : rest potential of the neuron
     /// * reset_potential : reset potential of the neuron
-    pub fn from_numpy(layer_paths: Vec<&str>, neuron_config: NeuronConfig) -> Snn {
+    pub fn from_numpy(layer_paths: Vec<&str>, neuron_config: NeuronConfig) -> Result<Snn, ReadNpyError> {
         let mut snn = Self::new(neuron_config);
 
         let input_layer = snn.new_layer();
 
         let mut neurons_added: usize = 0;
         for (n_layer, layer_path) in layer_paths.iter().enumerate() {
-            let weights: Array2<f32> = read_npy(layer_path).expect(format!("Failed to read layer {} file", n_layer).as_str());
+            let weights: Array2<f32> = read_npy(layer_path)?;
             let layer = snn.new_layer();
 
             if n_layer == 0 {
@@ -344,7 +344,7 @@ impl Snn {
             neurons_added += weights.shape()[1];
         }
 
-        snn
+        Ok(snn)
     }
 
 
@@ -1182,9 +1182,10 @@ impl ExpectedOutput {
     /// Create new expected output vector for the Spiral Neural Network from numpy file
     /// # Arguments:
     /// * path : path to the numpy file
-    pub fn from_numpy(path: &str) -> Vec<ExpectedOutput> {
-        let outputs_raw: Array1<i64> = read_npy(path).expect("Failed to read output file");
-        outputs_raw.iter().map(|x| ExpectedOutput { value: u8::from_i64(*x).unwrap() }).collect()
+    pub fn from_numpy(path: &str) -> Result<Vec<ExpectedOutput>, ReadNpyError> {
+        let outputs_raw: Array1<i64> = read_npy(path)?;
+        let ret = outputs_raw.iter().map(|x| ExpectedOutput { value: u8::from_i64(*x).unwrap() }).collect();
+        Ok(ret)
     }
     /// Create a dummy expected output vector
     /// # Arguments:
